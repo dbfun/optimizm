@@ -10,7 +10,7 @@
 DB_FILE=optimizm.db
 
 # Пути к изображениям через пробел
-DIRS="templates/beez images media"
+DIRS="."
 
 # RUN
 
@@ -46,13 +46,14 @@ function init {
   fi
 
   # Создает БД если ее еще нет
-  sqlite3 $DB_FILE "CREATE TABLE IF NOT EXISTS images (filepath VARCHAR(512) NOT NULL UNIQUE, date DATETIME NOT NULL);"
+  sqlite3 $DB_FILE "CREATE TABLE IF NOT EXISTS images (filepath VARCHAR(512) NOT NULL UNIQUE, date DATETIME NOT NULL, type VARCHAR(8) NOT NULL);"
 }
 
 function optimizeExt {
 
   local EXT=$1
   local CMD=$2
+  local TYPE=$2
 
   echo "# Optimize *.$EXT"
 
@@ -66,7 +67,7 @@ function optimizeExt {
       COUNT=`sqlite3 $DB_FILE "SELECT COUNT(*) FROM images WHERE filepath = '${FILE//\'/''}';"`
       if [[ "$COUNT" == "0" ]]; then
         $CMD "$FILE" > /dev/null
-        `sqlite3 $DB_FILE "INSERT INTO images (filepath, date) VALUES ('${FILE//\'/''}', datetime());"`
+        `sqlite3 $DB_FILE "INSERT INTO images (filepath, date, type) VALUES ('${FILE//\'/''}', datetime(), '$TYPE');"`
       fi
     done
   done
@@ -85,7 +86,8 @@ function progressBar {
 
 
 init
-optimizeExt 'jpg' 'jpegoptim --strip-all'
-optimizeExt 'jpeg' 'jpegoptim --strip-all'
-optimizeExt 'gif' 'gifsicle --careful -w -b -O2'
-optimizeExt 'png' 'optipng -o5 -quiet -preserve'
+optimizeExt 'jpg' 'jpegoptim --strip-all' 'lossless'
+optimizeExt 'jpeg' 'jpegoptim --strip-all' 'lossless'
+optimizeExt 'gif' 'gifsicle --careful -w -b -O2' 'lossless'
+optimizeExt 'png' 'optipng -o5 -quiet -preserve' 'lossless'
+# optimizeExt 'png' 'pngquant --quality=75-85 --ext=.png --force' 'lossy'
